@@ -1,0 +1,35 @@
+{
+  "name": "gdoc2respec",
+  "version": "0.0.1",
+  "description": "Convert a Google Doc (gdoc) to a W3C respec HTML file using some half-baked rules",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && tap --cov test*.js test/[a-z]*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandhawke/gdoc2respec.git"
+  },
+  "keywords": [
+    "gdoc",
+    "google doc",
+    "respec",
+    "w3c"
+  ],
+  "author": "Sandro Hawke (http://hawke.org/sandro)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sandhawke/gdoc2respec/issues"
+  },
+  "homepage": "https://github.com/sandhawke/gdoc2respec#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "debug": "^3.1.0",
+    "node-fetch": "^2.2.0"
+  },
+  "devDependencies": {
+    "standard": "^11.0.1",
+    "tap": "^12.0.1",
+    "tape": "^4.9.1"
+  }
+}
