@@ -54,7 +54,7 @@ function c2 (config, txt) {
     if (m) {
       return m[2]
     }
-    return 'X' + old + 'Y'
+    return old
   })
 
   //
