@@ -12,10 +12,11 @@ const convert = require('gdoc2respec')
 
 const config = {
   gdocID: '1WWYQ33Y9ENcueiFnrb3hJzD2rxKCRw9ok8T3PrDLOB8',
-  title: 'My Doc Id',
   specStatus: 'WD',
   editors: ...
 }
+
+// I don't really want these in the gdoc:
 
 config.abstractHTML = `...`
 
@@ -24,3 +25,10 @@ config.sotdHTML = `...`
 convert(config).then(x => process.stdout.write(x))
 
 ```
+
+## What your doc should look like
+
+* Use proper headings, H1, H2, etc, via ctl-alt-1,2, etc or the menu
+* I suggest using the 'Table of Contents' add-on, set to X.Y.Z. format, so it looks the same as respec will produce
+* Only simple, ordinary, original-HTML stuff will work, like bold, italic, ordered lists, and bullet lists.
+
