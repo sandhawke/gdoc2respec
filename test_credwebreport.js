@@ -4,8 +4,6 @@ const fs = require('fs')
 
 const config = {
   gdocID: '1WWYQ33Y9ENcueiFnrb3hJzD2rxKCRw9ok8T3PrDLOB8',
-  title: 'Technological Approaches to Improving Credibility Assessment on the Web',
-  format: 'markdown',
   noRecTrack: true,
   edDraftURI: 'https://credweb.org/report/snapshot',
   specStatus: 'ED',
