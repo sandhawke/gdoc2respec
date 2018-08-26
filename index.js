@@ -3,6 +3,9 @@ const fetch = require('node-fetch')
 const debug = require('debug')('gdoc2respec')
 
 async function convert (config) {
+  if (!config.gdocID || !config.gdocID.match(/[0-9a-zA-Z]{20,}/)) {
+    throw new Error('Missing or bad gdocID')
+  }
   const url = 'https://docs.google.com/document/export?format=html&id=' + config.gdocID
   debug('fetching', url)
   const result = await fetch(url)
