@@ -27,6 +27,14 @@ function c2 (config, txt) {
   const $ = cheerio.load(txt)
 
   //
+  // Figure out the title
+  //
+
+  if (!config.title) {
+    config.title = $('.title').text()
+  }
+
+  //
   // Create <b> and <i> wrappers from the style + class
   //
 
