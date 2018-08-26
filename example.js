@@ -2,7 +2,6 @@ const convert = require('gdoc2respec')
 
 const config = {
   gdocID: '1WWYQ33Y9ENcueiFnrb3hJzD2rxKCRw9ok8T3PrDLOB8',
-  title: 'Technological Approaches to Improving Credibility Assessment on the Web',
   noRecTrack: true,
   edDraftURI: 'https://credweb.org/report/snapshot',
   specStatus: 'ED',
