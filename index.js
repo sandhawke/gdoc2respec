@@ -86,7 +86,7 @@ function c2 (config, txt) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${config.title}</title>
+  <title>${config.title}</title>${config.extraHead || ''}
   <script src="https://www.w3.org/Tools/respec/respec-w3c-common" class="remove">
   </script>
   <script class="remove">
@@ -129,7 +129,11 @@ function c2 (config, txt) {
       }
     }
     if (dropping) return
-    log(indent() + $(this).clone().wrap('<p>').parent().html())
+    let html = $(this).clone().wrap('<p>').parent().html()
+    if (config.filter) {
+      html = config.filter(html)
+    }
+    log(indent() + html)
   })
 
   while (curLevel >= 1) {
