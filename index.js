@@ -1,8 +1,36 @@
+/*
+
+  config.sectionExtra is called at the end of the intro of each
+  section, which is when the section ends or a subsection starts,
+  whichever comes first.  It is passed an array of strings which is
+  all the lines in the section so far, and should return an array of
+  all the lines to add at this point.
+
+ */
+
 const cheerio = require('cheerio')
 const fetch = require('node-fetch')
 const debug = require('debug')('gdoc2respec')
+const fs = require('fs')
+// const H = require('escape-html-template-tag')   // H.safe( ) if needed
+
+function aReadFile(filename, options = 'utf8') {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filename, options, (err, data) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(data)
+      }
+    })
+  })
+}
 
 async function convert (config) {
+  if (config.useFile) {
+    const body = await aReadFile(config.useFile)
+    return c2(config, body)
+  }
   if (!config.gdocID || !config.gdocID.match(/[0-9a-zA-Z_]{20,}/)) {
     throw new Error('Missing or bad gdocID')
   }
@@ -18,7 +46,8 @@ async function convert (config) {
 function c2 (config, txt) {
   debug('got document text: ', txt.substring(1, 50), '...')
   let out = []
-
+  let sectionStartsAt = null  // index into out
+  
   function log (str) {
     debug('logged', str)
     out.push(str)
@@ -121,15 +150,23 @@ function c2 (config, txt) {
 
       while (level <= curLevel) {
         curLevel--
+        sectionIntroEnds()
         log(indent() + '</section>')
       }
       while (level > curLevel) {
+        sectionIntroEnds()
+        sectionStarts()
         log(indent() + '<section>')
         curLevel++
       }
     }
     if (dropping) return
+    let raw = $(this).clone()
     let html = $(this).clone().wrap('<p>').parent().html()
+    if (config.seeNode) {
+      const r = config.seeNode(raw)
+      if (r) html = r
+    }
     if (config.filter) {
       html = config.filter(html)
     }
@@ -138,12 +175,34 @@ function c2 (config, txt) {
 
   while (curLevel >= 1) {
     curLevel--
+    sectionIntroEnds()
     log(indent() + '</section>')
   }
 
   log('</body></html>')
   log('')
+  for (let i = 0; i < out.length; i++) {
+    // let the plugins return arrays, so they can alter them later in the flow
+    if (Array.isArray(out[i])) out[i] = out[i].join(' ')
+  }
   return out.join('\n')
+
+  function sectionStarts() {
+    sectionStartsAt = out.length
+    // console.log('sectionStartsAt set to', sectionStartsAt)
+  }
+
+  function sectionIntroEnds() {
+    if (!config.sectionExtra) return
+    if (sectionStartsAt === null) return
+    // console.log('using SSA', sectionStartsAt)
+    
+    // might be section is ending, or might be sub-section is starting
+
+    const moreLines = config.sectionExtra(out.slice(sectionStartsAt))
+    out.push(...moreLines)
+    sectionStartsAt = null
+  }
 }
 
 module.exports = convert
