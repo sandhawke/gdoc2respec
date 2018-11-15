@@ -51,12 +51,21 @@ test('sectionExtra', t => {
       const level = parseInt(t[1])
       h = node.html()
       aliases = null  // lest we use our parent headings aliases
+      const html = node.clone().wrap('<p>').parent().html()
+      const cut = html.indexOf('>') + 1
+      const arr = [html.slice(0, cut), html.slice(cut)]
+      console.log('split array', arr)
+      arr.splice(1, 0, '<span>LINKFORALIAS 0</span>')
+      arr.splice(1, 0, '<span>LINKFORALIAS 1</span>')
+      console.log('returning array', arr)
+      return arr
     } else {
       const html = node.html()
       const m = html.match(/^also called: *(.*)$/i)
       if (m) {
         aliases = m[1].split(/, */)
       }
+      return false
     }
   }
   config.sectionExtra = lines => {

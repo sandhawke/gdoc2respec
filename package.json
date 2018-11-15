@@ -1,6 +1,6 @@
 {
   "name": "gdoc2respec",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Convert a Google Doc (gdoc) to a W3C respec HTML file using some half-baked rules",
   "main": "index.js",
   "scripts": {

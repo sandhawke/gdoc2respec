@@ -1,19 +1,37 @@
 /*
 
+  config is respec's config, plus some extra things we use:
+  
+  config.seeNode is passed each DOM element node, which it may alter.
+  If it returns truthy, it is taken as new outerHTML text (or array of
+  that text to be joined later -- but then config.filter gets passed
+  the array.)
+
+  config.filter is passed the outer HTML as a string for each element,
+  and whatever it returns is used in its place.  Can also return an
+  array of strings; they will be joined later, at the end of
+  the pass.  This allows the filter to replace / insert text later on,
+  by remembering the array object it returned and changing it. This
+  runs right after seeNode.
+
   config.sectionExtra is called at the end of the intro of each
-  section, which is when the section ends or a subsection starts,
-  whichever comes first.  It is passed an array of strings which is
-  all the lines in the section so far, and should return an array of
-  all the lines to add at this point.
+  section, which is right before either the section ends or a
+  subsection starts, whichever comes first.  It is passed an array of
+  strings which is all the lines in the section so far, and should
+  return an array of all the lines to add at this point.
+
+  config.sectionFilter is like sectionExtra but it must return
+  whatever lines will become the new text of the section.
 
  */
 
 const cheerio = require('cheerio')
 const fetch = require('node-fetch')
 const debug = require('debug')('gdoc2respec')
-const fs = require('fs')
+const fs = require('fs').promises
 // const H = require('escape-html-template-tag')   // H.safe( ) if needed
 
+/*
 function aReadFile(filename, options = 'utf8') {
   return new Promise((resolve, reject) => {
     fs.readFile(filename, options, (err, data) => {
@@ -25,21 +43,24 @@ function aReadFile(filename, options = 'utf8') {
     })
   })
 }
+*/
 
 async function convert (config) {
   if (config.useFile) {
-    const body = await aReadFile(config.useFile)
+    const body = await fs.readFile(config.useFile)
     return c2(config, body)
   }
-  if (!config.gdocID || !config.gdocID.match(/[0-9a-zA-Z_]{20,}/)) {
-    throw new Error('Missing or bad gdocID')
-  }
-  const url = 'https://docs.google.com/document/export?format=html&id=' + config.gdocID
+  if (!config.gdocID) throw new Error('Missing config.gdocID')
+  const m = config.gdocID.match(/([0-9a-zA-Z_-]{20,})/)
+  if (!m) throw new Error('config.gdocID seems badly formated')
+  const id = m[1] // pull out the doc id, so URLs are okay
+  const url = 'https://docs.google.com/document/export?format=html&id=' + id
   debug('fetching', url)
   const result = await fetch(url)
   debug('fetch() returned results')
   const body = await result.text()
   debug('fetch() results complete')
+  await fs.writeFile('last-fetch.html', body)
   return c2(config, body)
 }
 
@@ -48,9 +69,15 @@ function c2 (config, txt) {
   let out = []
   let sectionStartsAt = null  // index into out
   
-  function log (str) {
-    debug('logged', str)
-    out.push(str)
+  function log (level, data) {
+    debug('logged', data)
+    const i = indent(level)
+    if (Array.isArray(data)) {
+      data[0] = i + data[0]
+    } else {
+      data = i + data
+    }
+    out.push(data)
   }
 
   const $ = cheerio.load(txt)
@@ -111,7 +138,7 @@ function c2 (config, txt) {
   // Output head with respec boilerplate
   //
 
-  log(`<!DOCTYPE html>
+  log(0, `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -135,8 +162,8 @@ function c2 (config, txt) {
 
   let curLevel = 0
 
-  function indent () {
-    return (''.padStart(curLevel * 4, ' '))
+  function indent (level) {
+    return (''.padStart(level * 4, ' '))
   }
 
   // log($('body').html())
@@ -151,39 +178,43 @@ function c2 (config, txt) {
       while (level <= curLevel) {
         curLevel--
         sectionIntroEnds()
-        log(indent() + '</section>')
+        log(curLevel, '</section>')
       }
       while (level > curLevel) {
         sectionIntroEnds()
         sectionStarts()
-        log(indent() + '<section>')
+        log(curLevel, '<section>')
         curLevel++
       }
     }
     if (dropping) return
-    let raw = $(this).clone()
-    let html = $(this).clone().wrap('<p>').parent().html()
+
+    let seeNodeOut, html
     if (config.seeNode) {
-      const r = config.seeNode(raw)
-      if (r) html = r
+      seeNodeOut = config.seeNode($(this))
+    }
+    if (seeNodeOut) {
+      html = seeNodeOut
+    } else {
+      html = $(this).clone().wrap('<p>').parent().html()
     }
     if (config.filter) {
       html = config.filter(html)
     }
-    log(indent() + html)
+    log(curLevel, html)
   })
 
   while (curLevel >= 1) {
     curLevel--
     sectionIntroEnds()
-    log(indent() + '</section>')
+    log(curLevel, '</section>')
   }
 
-  log('</body></html>')
-  log('')
+  log(0, '</body></html>')
+  log(0, '')
   for (let i = 0; i < out.length; i++) {
     // let the plugins return arrays, so they can alter them later in the flow
-    if (Array.isArray(out[i])) out[i] = out[i].join(' ')
+    if (Array.isArray(out[i])) out[i] = out[i][0] // .join('$')
   }
   return out.join('\n')
 
@@ -193,15 +224,24 @@ function c2 (config, txt) {
   }
 
   function sectionIntroEnds() {
-    if (!config.sectionExtra) return
-    if (sectionStartsAt === null) return
-    // console.log('using SSA', sectionStartsAt)
-    
-    // might be section is ending, or might be sub-section is starting
-
-    const moreLines = config.sectionExtra(out.slice(sectionStartsAt))
-    out.push(...moreLines)
-    sectionStartsAt = null
+    if (config.sectionExtra) {
+      if (sectionStartsAt === null) return
+      // console.log('using SSA', sectionStartsAt)
+      
+      // might be section is ending, or might be sub-section is starting
+      
+      const moreLines = config.sectionExtra(out.slice(sectionStartsAt))
+      if (moreLines) out.push(...moreLines)
+      sectionStartsAt = null
+    }
+    if (config.sectionFilter) {    // this is probably better than sectionExtra
+      if (sectionStartsAt === null) return
+      const lines = config.sectionFilter(out.slice(sectionStartsAt))
+      if (lines) {
+        out.splice(sectionStartsAt, out.length, ...lines)
+      }
+      sectionStartsAt = null
+    }
   }
 }
 
