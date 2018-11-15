@@ -1,6 +1,6 @@
 /*
 
-  config is respec's config, plus some extra things we use:
+  config.respec is respec's config
   
   config.seeNode is passed each DOM element node, which it may alter.
   If it returns truthy, it is taken as new outerHTML text (or array of
@@ -47,7 +47,8 @@ function aReadFile(filename, options = 'utf8') {
 
 async function convert (config) {
   if (config.useFile) {
-    const body = await fs.readFile(config.useFile)
+    const body = await fs.readFile(config.useFile, 'utf8')
+    console.warn('Skipping gdoc, using file', config.useFile)
     return c2(config, body)
   }
   if (!config.gdocID) throw new Error('Missing config.gdocID')
@@ -146,10 +147,10 @@ function c2 (config, txt) {
   <script src="https://www.w3.org/Tools/respec/respec-w3c-common" class="remove">
   </script>
   <script class="remove">
-  var respecConfig = ${JSON.stringify(config, null, 4)}
+  var respecConfig = ${JSON.stringify(config.respec, null, 4)}
   </script>
 </head>
-<body>
+<body>${config.bodyFirst || ''}
   <div id="abstract">${config.abstractHTML}</div>
   <div id="sotd">${config.sotdHTML}</div>
 `)
